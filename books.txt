@@ -1,0 +1,2 @@
+PrintedBook,The Great Gatsby,F. Scott Fitzgerald,FICTION,180,AVAILABLE
+EBook,Digital Fortress,Dan Brown,MYSTERY,1.2,AVAILABLE

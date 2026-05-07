@@ -1,0 +1,39 @@
+3
+The Great Gatsby
+F. Scott Fitzgerald
+FICTION
+PrintedBook
+180
+3
+Digital Fortress
+Dan Brown
+MYSTERY
+EBook
+1.2
+1
+4
+Alice Johnson
+101
+4
+Bob Smith
+102
+2
+5
+101
+The Great Gatsby
+1
+5
+102
+The Great Gatsby
+5
+999
+Digital Fortress
+5
+101
+Non-existent Book
+6
+101
+The Great Gatsby
+1
+99
+9

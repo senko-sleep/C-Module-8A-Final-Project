@@ -1,5 +1,10 @@
 #include "Transaction.h"
+#include <iostream>
 
-// logs a transaction with current time
-Transaction::Transaction(int pid, const std::string& bt, const std::string& act)
-    : patronId(pid), bookTitle(bt), action(act), timestamp(std::time(nullptr)) {}
+Transaction::Transaction(int pid, const std::string& bt, const std::string& act, const Date& d)
+    : patronId(pid), bookTitle(bt), action(act), date(d) {}
+
+void Transaction::displayTransaction() const {
+    std::cout << "Date: " << date << " | Patron ID: " << patronId 
+              << " | Book: " << bookTitle << " | Action: " << action << std::endl;
+}

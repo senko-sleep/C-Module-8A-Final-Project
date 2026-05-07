@@ -4,6 +4,12 @@
 Book::Book(const std::string& t, const std::string& a, Genre g)
     : title(t), author(a), genre(g), status(AVAILABLE) {}
 
+EBook::EBook(const std::string& t, const std::string& a, Genre g, double fs)
+    : Book(t, a, g), fileSize(fs) {}
+
+PrintedBook::PrintedBook(const std::string& t, const std::string& a, Genre g, int pc)
+    : Book(t, a, g), pageCount(pc) {}
+
 // lets us print books easily
 std::ostream& operator<<(std::ostream& os, const Book& book) {
     book.displayInfo(os);

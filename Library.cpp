@@ -74,7 +74,6 @@ void Library::loadFromCSV(const std::string& filename, T loader) {
     file.close();
 }
 
-// saves data to files
 void Library::saveData() {
     try {
         saveBooksToCSV();
@@ -84,14 +83,22 @@ void Library::saveData() {
     }
 }
 
+// template for saving items to csv
+template<typename T, typename U>
+void Library::saveToCSV(const std::string& filename, const T& items, U saver) {
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        throw LibraryException("Cannot open file for writing: " + filename);
+    }
+    for (const auto& item : items) {
+        saver(file, item);
+    }
+    file.close();
+}
+
 // saves books as csv
 void Library::saveBooksToCSV() {
-    std::ofstream file(booksFile);
-    if (!file.is_open()) {
-        throw LibraryException("Cannot open file: " + booksFile);
-    }
-    
-    for (const auto book : books) {
+    saveToCSV(booksFile, books, [](std::ofstream& file, Book* book) {
         std::string type = dynamic_cast<EBook*>(book) ? "EBook" : "PrintedBook";
         file << type << "," << book->getTitle() << "," << book->getAuthor() << ","
              << genreToString(book->getGenre()) << ",";
@@ -103,21 +110,14 @@ void Library::saveBooksToCSV() {
         }
         
         file << "," << statusToString(book->getStatus()) << std::endl;
-    }
-    file.close();
+    });
 }
 
 // saves patrons as csv
 void Library::savePatronsToCSV() {
-    std::ofstream file(patronsFile);
-    if (!file.is_open()) {
-        throw LibraryException("Cannot open file: " + patronsFile);
-    }
-    
-    for (const auto& pair : patrons) {
+    saveToCSV(patronsFile, patrons, [](std::ofstream& file, const std::pair<const int, Patron>& pair) {
         file << pair.first << "," << pair.second.getName() << std::endl;
-    }
-    file.close();
+    });
 }
 
 // shows all books
@@ -174,7 +174,9 @@ void Library::checkoutBook(int patronId, const std::string& title) {
     }
     
     book->setStatus(CHECKED_OUT);
-    Transaction t(patronId, title, "checkout");
+    patron->borrowBook(book);
+    
+    Transaction t(patronId, title, "checkout", Date::getCurrentDate());
     transactions.push_back(t);
     logTransaction(t);
 }
@@ -196,9 +198,35 @@ void Library::returnBook(int patronId, const std::string& title) {
     }
     
     book->setStatus(AVAILABLE);
-    Transaction t(patronId, title, "return");
+    patron->returnBook(book);
+    
+    Transaction t(patronId, title, "return", Date::getCurrentDate());
     transactions.push_back(t);
     logTransaction(t);
+}
+
+void Library::searchByAuthor(const std::string& author) const {
+    std::cout << "\n=== Books by Author: " << author << " ===" << std::endl;
+    bool found = false;
+    for (const auto& book : books) {
+        if (book->getAuthor() == author) {
+            std::cout << *book;
+            found = true;
+        }
+    }
+    if (!found) std::cout << "No books found by this author." << std::endl;
+}
+
+void Library::searchByGenre(Genre genre) const {
+    std::cout << "\n=== Books by Genre: " << genreToString(genre) << " ===" << std::endl;
+    bool found = false;
+    for (const auto& book : books) {
+        if (book->getGenre() == genre) {
+            std::cout << *book;
+            found = true;
+        }
+    }
+    if (!found) std::cout << "No books found in this genre." << std::endl;
 }
 
 // main menu loop
@@ -211,11 +239,18 @@ void Library::runMenu() {
         std::cout << "4. Add Patron" << std::endl;
         std::cout << "5. Checkout Book" << std::endl;
         std::cout << "6. Return Book" << std::endl;
-        std::cout << "7. Exit" << std::endl;
+        std::cout << "7. Search Books" << std::endl;
+        std::cout << "8. View Patron Details" << std::endl;
+        std::cout << "9. Exit" << std::endl;
         std::cout << "Enter choice: ";
         
         int choice;
-        std::cin >> choice;
+        if (!(std::cin >> choice)) {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Invalid input. Please enter a number." << std::endl;
+            continue;
+        }
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         
         try {
@@ -243,14 +278,22 @@ void Library::runMenu() {
                     if (type == "EBook") {
                         double fileSize;
                         std::cout << "Enter file size (MB): ";
-                        std::cin >> fileSize;
-                        std::cin.ignore();
+                        while (!(std::cin >> fileSize)) {
+                            std::cin.clear();
+                            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                            std::cout << "Invalid input. Please enter a numeric value for file size: ";
+                        }
+                        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
                         book = new EBook(title, author, genre, fileSize);
                     } else if (type == "PrintedBook") {
                         int pageCount;
                         std::cout << "Enter page count: ";
-                        std::cin >> pageCount;
-                        std::cin.ignore();
+                        while (!(std::cin >> pageCount)) {
+                            std::cin.clear();
+                            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                            std::cout << "Invalid input. Please enter a numeric value for page count: ";
+                        }
+                        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
                         book = new PrintedBook(title, author, genre, pageCount);
                     } else {
                         std::cout << "Invalid book type." << std::endl;
@@ -267,8 +310,12 @@ void Library::runMenu() {
                     std::cout << "Enter patron name: ";
                     std::getline(std::cin, name);
                     std::cout << "Enter patron ID: ";
-                    std::cin >> id;
-                    std::cin.ignore();
+                    while (!(std::cin >> id)) {
+                        std::cin.clear();
+                        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                        std::cout << "Invalid ID. Please enter a numeric value for patron ID: ";
+                    }
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
                     
                     Patron patron(name, id);
                     addPatron(patron);
@@ -279,8 +326,12 @@ void Library::runMenu() {
                     int patronId;
                     std::string title;
                     std::cout << "Enter patron ID: ";
-                    std::cin >> patronId;
-                    std::cin.ignore();
+                    while (!(std::cin >> patronId)) {
+                        std::cin.clear();
+                        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                        std::cout << "Invalid ID. Please enter a numeric value for patron ID: ";
+                    }
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
                     std::cout << "Enter book title: ";
                     std::getline(std::cin, title);
                     
@@ -292,8 +343,12 @@ void Library::runMenu() {
                     int patronId;
                     std::string title;
                     std::cout << "Enter patron ID: ";
-                    std::cin >> patronId;
-                    std::cin.ignore();
+                    while (!(std::cin >> patronId)) {
+                        std::cin.clear();
+                        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                        std::cout << "Invalid ID. Please enter a numeric value for patron ID: ";
+                    }
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
                     std::cout << "Enter book title: ";
                     std::getline(std::cin, title);
                     
@@ -301,7 +356,45 @@ void Library::runMenu() {
                     std::cout << "Book returned successfully." << std::endl;
                     break;
                 }
-                case 7:
+                case 7: {
+                    std::cout << "Search by: 1. Author, 2. Genre: ";
+                    int searchChoice;
+                    while (!(std::cin >> searchChoice)) {
+                        std::cin.clear();
+                        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                        std::cout << "Invalid input. Please enter 1 or 2: ";
+                    }
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                    if (searchChoice == 1) {
+                        std::string author;
+                        std::cout << "Enter author name: ";
+                        std::getline(std::cin, author);
+                        searchByAuthor(author);
+                    } else if (searchChoice == 2) {
+                        std::string genreStr;
+                        std::cout << "Enter genre (FICTION, NON_FICTION, MYSTERY, ROMANCE, SCI_FI, BIOGRAPHY): ";
+                        std::getline(std::cin, genreStr);
+                        searchByGenre(stringToGenre(genreStr));
+                    } else {
+                        std::cout << "Invalid search option." << std::endl;
+                    }
+                    break;
+                }
+                case 8: {
+                    int patronId;
+                    std::cout << "Enter patron ID: ";
+                    while (!(std::cin >> patronId)) {
+                        std::cin.clear();
+                        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                        std::cout << "Invalid ID. Please enter a numeric value for patron ID: ";
+                    }
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                    Patron* p = findPatron(patronId);
+                    if (p) p->displayPatron();
+                    else std::cout << "Patron not found." << std::endl;
+                    break;
+                }
+                case 9:
                     saveData();
                     std::cout << "Data saved successfully. Exiting..." << std::endl;
                     return;
@@ -333,11 +426,7 @@ Patron* Library::findPatron(int id) {
 void Library::logTransaction(const Transaction& t) {
     std::ofstream file(logFile, std::ios::app);
     if (file.is_open()) {
-        char timeStr[26];
-        ctime_s(timeStr, sizeof(timeStr), &t.getTimestamp());
-        timeStr[24] = '\0';
-        
-        file << timeStr << "," << t.getPatronId() << "," 
+        file << t.getDate() << "," << t.getPatronId() << "," 
              << t.getBookTitle() << "," << t.getAction() << std::endl;
         file.close();
     }

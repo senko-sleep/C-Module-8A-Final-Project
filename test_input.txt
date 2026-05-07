@@ -1,0 +1,26 @@
+4
+Alice Johnson
+101
+3
+The Great Gatsby
+F. Scott Fitzgerald
+FICTION
+PrintedBook
+180
+1
+2
+5
+101
+The Great Gatsby
+8
+101
+7
+1
+F. Scott Fitzgerald
+7
+2
+FICTION
+6
+101
+The Great Gatsby
+9

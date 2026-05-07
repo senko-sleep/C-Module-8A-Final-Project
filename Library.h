@@ -46,6 +46,9 @@ public:
     void checkoutBook(int patronId, const std::string& title);
     void returnBook(int patronId, const std::string& title);
     
+    void searchByAuthor(const std::string& author) const;
+    void searchByGenre(Genre genre) const;
+    
     void runMenu();
 
 private:
@@ -55,6 +58,9 @@ private:
     
     template<typename T>
     void loadFromCSV(const std::string& filename, T loader);
+    
+    template<typename T, typename U>
+    void saveToCSV(const std::string& filename, const T& items, U saver);
     
     void saveBooksToCSV();
     void savePatronsToCSV();
